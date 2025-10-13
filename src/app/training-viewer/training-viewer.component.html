@@ -21,6 +21,32 @@
   </div>
 </div>
 
+<!-- Video Gallery -->
+<div class="video-gallery-container" *ngIf="!showPopup">
+  <h3 class="gallery-title">Training Videos</h3>
+  <div class="video-gallery">
+    <div class="video-card" *ngFor="let video of trainingVideos" (click)="openVideoPlayer(video)">
+      <div class="video-thumbnail">
+        <img [src]="video.thumbnail" [alt]="video.title">
+        <div class="video-overlay">
+          <div class="play-icon">▶️</div>
+          <div *ngIf="getVideoProgressPercent(video.id) > 0 && !isVideoCompleted(video.id)" 
+               class="progress-indicator">
+            <div class="progress-bar">
+              <div class="progress-fill" [style.width.%]="getVideoProgressPercent(video.id)"></div>
+            </div>
+            <span>{{ getVideoProgressPercent(video.id) }}%</span>
+          </div>
+          <div *ngIf="isVideoCompleted(video.id)" class="completed-badge">
+            ✓ Completed
+          </div>
+        </div>
+      </div>
+      <h4 class="video-title">{{ video.title }}</h4>
+    </div>
+  </div>
+</div>
+
 <!-- Slide Viewer Popup -->
 <div class="popup-overlay" *ngIf="showPopup" (click)="onPopupOverlayClick($event)">
   <div class="training-popup" (click)="$event.stopPropagation()">
@@ -139,3 +165,6 @@
     </div>
   </div>
 </div>
+
+<!-- Video Player Popup Component -->
+<app-video-player></app-video-player>

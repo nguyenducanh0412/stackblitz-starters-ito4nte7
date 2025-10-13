@@ -1,17 +1,19 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { timer, Subscription, interval } from 'rxjs';
 import {
   SlideProgress,
   TrainingProgressService,
+  VideoProgress
 } from '../training-progress.service';
 import { NgxExtendedPdfViewerModule } from 'ngx-extended-pdf-viewer';
 import { CommonModule } from '@angular/common';
+import { VideoPlayerComponent } from '../video-player/video-player.component';
 
 @Component({
   selector: 'app-training-viewer',
   templateUrl: './training-viewer.component.html',
   styleUrls: ['./training-viewer.component.scss'],
-  imports: [NgxExtendedPdfViewerModule, CommonModule],
+  imports: [NgxExtendedPdfViewerModule, CommonModule, VideoPlayerComponent],
 })
 export class TrainingViewerComponent implements OnInit, OnDestroy {
   // PDF Configuration
@@ -25,6 +27,24 @@ export class TrainingViewerComponent implements OnInit, OnDestroy {
 
   // Progress Tracking
   progress!: SlideProgress;
+  
+  // Video Player
+  @ViewChild(VideoPlayerComponent) videoPlayer!: VideoPlayerComponent;
+  showVideoPopup = false;
+  trainingVideos = [
+    {
+      id: 'video1',
+      title: 'Introduction to Training',
+      source: 'https://storage.googleapis.com/muxdemofiles/mux-video-intro.mp4',
+      thumbnail: 'https://images.pexels.com/photos/6953871/pexels-photo-6953871.jpeg'
+    },
+    {
+      id: 'video2',
+      title: 'Advanced Training Techniques',
+      source: 'https://storage.googleapis.com/muxdemofiles/mux-video-intro.mp4',
+      thumbnail: 'https://images.pexels.com/photos/5428826/pexels-photo-5428826.jpeg'
+    }
+  ];
 
   // Timer Management
   timerSub?: Subscription;
@@ -343,6 +363,54 @@ export class TrainingViewerComponent implements OnInit, OnDestroy {
         (pdfViewer as any).page = this.currentPage;
       }
     }, 100);
+  }
+  
+  // ===== VIDEO PLAYER FUNCTIONS =====
+  
+  /**
+   * Opens the video player popup for the selected video
+   * @param video The video to play
+   */
+  openVideoPlayer(video: any): void {
+    if (!this.videoPlayer) {
+      console.error('Video player component not found');
+      return;
+    }
+    
+    // There was an issue with ViewChild not being available immediately 
+    // after component initialization
+    setTimeout(() => {
+      this.videoPlayer.openPopup(video.id, video.source, video.title);
+    }, 0);
+  }
+  
+  /**
+   * Gets the progress information for a specific video
+   * @param videoId The ID of the video
+   */
+  getVideoProgress(videoId: string): VideoProgress | null {
+    return this.progressService.getVideoProgress(videoId);
+  }
+  
+  /**
+   * Calculates the progress percentage for a video
+   * @param videoId The ID of the video
+   */
+  getVideoProgressPercent(videoId: string): number {
+    const progress = this.getVideoProgress(videoId);
+    if (progress && progress.duration > 0) {
+      return Math.floor((progress.currentTime / progress.duration) * 100);
+    }
+    return 0;
+  }
+  
+  /**
+   * Check if a video has been completed
+   * @param videoId The ID of the video
+   */
+  isVideoCompleted(videoId: string): boolean {
+    const progress = this.getVideoProgress(videoId);
+    return progress?.completed || false;
   }
 
   // ===== LIFECYCLE HOOKS =====
