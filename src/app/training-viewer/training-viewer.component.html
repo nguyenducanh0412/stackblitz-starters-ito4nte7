@@ -1,0 +1,141 @@
+<!-- Cover Image Snap -->
+<div class="cover-container" *ngIf="!showPopup" (click)="openSlidePopup()">
+  <div class="cover-image">
+    <img src="./CV_Dinh-Cong-Truong.pdf" alt="Training Slide Cover" 
+         onerror="this.style.display='none'; this.nextElementSibling.style.display='block'">
+    <div class="cover-fallback" style="display: none;">
+      <div class="cover-icon">📄</div>
+      <h3>PowerPoint Training Slides</h3>
+      <p>Click to start training</p>
+    </div>
+  </div>
+  <div class="cover-overlay">
+    <div class="play-button">▶️</div>
+    <div class="cover-info">
+      <h3>Training Presentation</h3>
+      <p>{{ totalSlides }} slides • {{ progress.progressPercent | number:'1.0-0' }}% completed</p>
+      <p *ngIf="progress.currentSlideIndex > 1" class="resume-info">
+        Resume from slide {{ progress.currentSlideIndex }}
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- Slide Viewer Popup -->
+<div class="popup-overlay" *ngIf="showPopup" (click)="onPopupOverlayClick($event)">
+  <div class="training-popup" (click)="$event.stopPropagation()">
+    <div class="popup-header">
+      <h2>Slide Training Viewer</h2>
+      <button class="close-btn" (click)="closeSlidePopup()">&times;</button>
+    </div>
+
+    <div class="viewer-container" (keydown)="preventKeyboardNavigation($event)">
+      <div class="pdf-overlay" 
+           (wheel)="preventScrollNavigation($event)"
+           (contextmenu)="$event.preventDefault()"
+           (selectstart)="$event.preventDefault()">
+        <ngx-extended-pdf-viewer
+          [src]="pdfUrl"
+          [page]="currentPage"
+          [showToolbar]="false"
+          [showHandToolButton]="false"
+          [showPresentationModeButton]="false"
+          [showSidebarButton]="false"
+          [showFindButton]="false"
+          [showPagingButtons]="false"
+          [showZoomButtons]="false"
+          [showPrintButton]="false"
+          [showDownloadButton]="false"
+          [showRotateButton]="false"
+          [showSecondaryToolbarButton]="false"
+          [enableDragAndDrop]="false"
+          [textLayer]="true"
+          [zoom]="zoomLevel"
+          (pageChange)="onPageChange($event)"
+          (keydown)="preventKeyboardNavigation($event)"
+          style="height: 70vh; width: 100%; pointer-events: none;"
+        ></ngx-extended-pdf-viewer>
+        
+        <!-- Invisible overlay to block all interactions -->
+        <div class="interaction-blocker"></div>
+      </div>
+
+      <!-- Navigation blocked message -->
+      <div class="navigation-blocked" *ngIf="showNavigationBlockedMessage">
+        <div class="blocked-message">
+          <span class="blocked-icon">🚫</span>
+          <p>Navigation is controlled by the buttons below</p>
+          <p class="blocked-timer" *ngIf="!allowNext">Wait {{ formatTime(countdown) }}s to continue</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="training-controls">
+      <!-- Timer and Navigation Controls -->
+      <div class="timer-section">
+        <div class="timer-display" [class.warning]="countdown <= 2">
+          <span class="timer-icon">⏱️</span>
+          <span class="timer-text">{{ formatTime(countdown) }}</span>
+          <div class="timer-bar">
+            <div class="timer-progress" [style.width.%]="timerProgress"></div>
+          </div>
+        </div>
+        <p class="timer-info" *ngIf="!allowNext">
+          Wait {{ countdown }}s to continue to next slide
+        </p>
+        <p class="timer-info success" *ngIf="allowNext">
+          You can now navigate to the next slide
+        </p>
+      </div>
+
+      <!-- Progress Info -->
+      <div class="progress-section">
+        <div class="slide-info">
+          <span class="current-slide">Slide {{ currentPage }}</span>
+          <span class="slide-separator">of</span>
+          <span class="total-slides">{{ totalSlides }}</span>
+        </div>
+        
+        <div class="progress-bar">
+          <div class="progress-fill" [style.width.%]="progress.progressPercent"></div>
+          <span class="progress-text">{{ progress.progressPercent | number:'1.0-0' }}%</span>
+        </div>
+
+        <div class="slides-viewed">
+          <span>Slides viewed: {{ progress.viewedSlides.length }}/{{ totalSlides }}</span>
+        </div>
+      </div>
+
+      <!-- Navigation Buttons -->
+      <div class="navigation-section">
+        <button 
+          class="nav-btn prev-btn" 
+          (click)="goToPreviousSlide()" 
+          [disabled]="currentPage <= 1">
+          ⬅️ Previous
+        </button>
+        
+        <button 
+          class="nav-btn next-btn" 
+          (click)="goToNextSlide()" 
+          [disabled]="!allowNext || currentPage >= totalSlides"
+          [class.disabled]="!allowNext">
+          Next ➡️
+          <span *ngIf="!allowNext" class="disabled-tooltip">
+            Wait {{ countdown }}s
+          </span>
+        </button>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="action-section">
+        <button class="action-btn save-btn" (click)="saveProgress()">
+          💾 Save Progress
+        </button>
+        <button class="action-btn close-btn" (click)="closeSlidePopup()">
+          ✅ Close & Save
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
