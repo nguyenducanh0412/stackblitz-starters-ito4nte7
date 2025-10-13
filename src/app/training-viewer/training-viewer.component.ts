@@ -66,8 +66,20 @@ export class TrainingViewerComponent implements OnInit, OnDestroy {
     this.showPopup = true;
     // Ensure we start from the correct page
     this.updateCurrentPage(this.progress.currentSlideIndex);
-    // Start timer when popup opens
-    this.startSlideTimer();
+    
+    // Check if current slide has been viewed before marking it as viewed
+    const isAlreadyViewed = this.progress.viewedSlides.includes(this.progress.currentSlideIndex);
+    
+    // Only start timer if current slide hasn't been viewed before
+    if (!isAlreadyViewed) {
+      this.startSlideTimer();
+    } else {
+      // If slide already viewed, allow immediate navigation
+      this.allowNext = true;
+      this.countdown = 0;
+      this.timerProgress = 100;
+    }
+    
     // Mark current slide as viewed
     this.updateProgress();
 
@@ -152,8 +164,23 @@ export class TrainingViewerComponent implements OnInit, OnDestroy {
   private navigateToSlide(slideNumber: number): void {
     this.progress.currentSlideIndex = slideNumber;
     this.updateCurrentPage(slideNumber);
+    
+    // Check if slide has been viewed before updating progress
+    const isAlreadyViewed = this.progress.viewedSlides.includes(slideNumber);
+    
+    // Update progress (this will add the slide to viewedSlides)
     this.updateProgress();
-    this.startSlideTimer();
+    
+    // Only start timer if this slide hasn't been viewed before
+    if (!isAlreadyViewed) {
+      this.startSlideTimer();
+    } else {
+      // If slide already viewed, allow immediate navigation
+      this.allowNext = true;
+      this.countdown = 0;
+      this.timerProgress = 100;
+      this.stopTimers();
+    }
   }
 
   // ===== TIMER MANAGEMENT =====
