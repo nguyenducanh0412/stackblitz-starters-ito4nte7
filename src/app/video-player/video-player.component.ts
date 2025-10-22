@@ -1,11 +1,13 @@
-import { Component, OnInit, OnDestroy, ElementRef, ViewChild, HostListener } from '@angular/core';
+import { Component, OnInit, OnDestroy, ElementRef, ViewChild, ViewChild as ViewChildDecorator, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { VideoProgress, TrainingProgressService } from '../training-progress.service';
+import { SeekControlDirective } from './seek-control.directive';
+import { SeekInstructionsComponent } from './seek-instructions.component';
 
 @Component({
   selector: 'app-video-player',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, SeekControlDirective, SeekInstructionsComponent],
   template: `
     <div class="video-popup-overlay" *ngIf="isOpen" (click)="onOverlayClick($event)">
       <div class="video-popup" (click)="$event.stopPropagation()">
@@ -15,6 +17,8 @@ import { VideoProgress, TrainingProgressService } from '../training-progress.ser
         </div>
         <div class="video-container">
           <video #videoPlayer 
+                 appSeekControl
+                 [videoId]="videoId"
                  (play)="onVideoPlay()" 
                  (pause)="onVideoPause()" 
                  (ended)="onVideoEnded()"
@@ -31,6 +35,7 @@ import { VideoProgress, TrainingProgressService } from '../training-progress.ser
               <button (click)="restartVideo()">Xem lại</button>
             </div>
           </div>
+          <app-seek-instructions #seekInstructions></app-seek-instructions>
         </div>
         <div class="video-controls">
           <button (click)="togglePlayPause()" [class.restart-btn]="videoEnded">
@@ -186,6 +191,7 @@ import { VideoProgress, TrainingProgressService } from '../training-progress.ser
 })
 export class VideoPlayerComponent implements OnInit, OnDestroy {
   @ViewChild('videoPlayer') videoPlayerRef!: ElementRef<HTMLVideoElement>;
+  @ViewChild('seekInstructions') seekInstructions!: SeekInstructionsComponent;
   
   isOpen = false;
   videoSource = '';
@@ -354,7 +360,9 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
       if (savedProgress && savedProgress.currentTime > 0) {
         // Check if video was completed
         if (savedProgress.completed) {
-          // If video was completed, show the ended state
+          // If video was completed, show the ended state or keep in normal state
+          // but allow seeking throughout the entire video
+          console.log('Video previously completed, allowing full seeking');
           this.videoEnded = true;
           this.currentTime = savedProgress.duration;
           this.videoElement.currentTime = 0; // Start at beginning for replay
@@ -372,11 +380,21 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
   private initializeVideo(): void {
     if (!this.videoElement) return;
     
-    // Remove any existing seeking listener first to prevent duplicates
-    this.videoElement.removeEventListener('seeking', this.preventSeeking.bind(this));
+    // Check if this video has been completed before
+    const savedProgress = this.progressService.getVideoProgress(this.videoId);
+    const isCompleted = savedProgress?.completed || false;
     
-    // Disable seeking functionality
-    this.videoElement.addEventListener('seeking', this.preventSeeking.bind(this));
+    if (!isCompleted) {
+      // For videos not completed, use our seeking control logic
+      // Remove any existing seeking listener first to prevent duplicates
+      this.videoElement.removeEventListener('seeking', this.preventSeeking.bind(this));
+      
+      // Apply seeking restrictions
+      this.videoElement.addEventListener('seeking', this.preventSeeking.bind(this));
+    } else {
+      // For completed videos, allow free seeking
+      console.log('Video already completed - allowing free seeking');
+    }
     
     // Load saved progress - this is now handled by onMetadataLoaded
     // but we'll do a quick check if metadata is already loaded
@@ -388,12 +406,44 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
   private preventSeeking(e: Event): void {
     if (this.videoElement) {
       const seekingTo = this.videoElement.currentTime;
+      const savedProgress = this.progressService.getVideoProgress(this.videoId);
+      const isCompleted = savedProgress?.completed || false;
+      
+      // For completed videos, allow seeking freely
+      if (isCompleted) {
+        this.currentTime = seekingTo;
+        return;
+      }
+      
+      // For videos in progress:
+      // 1. Allow seeking backward (to positions already watched)
+      // 2. Prevent seeking forward beyond max watched position
+      
+      // Get maximum time the user has already watched in this video
+      const maxWatchedTime = savedProgress ? savedProgress.currentTime : 0;
       
       // Don't prevent small time adjustments due to buffering
       if (Math.abs(seekingTo - this.currentTime) > 1) {
-        console.log('Seeking prevented', this.currentTime);
-        // Prevent the seeking action by setting the time back
-        this.videoElement.currentTime = this.currentTime;
+        // If trying to seek forward beyond max watched position
+        if (seekingTo > maxWatchedTime && seekingTo > this.currentTime) {
+          console.log('Forward seeking prevented. Max allowed:', maxWatchedTime);
+          this.videoElement.currentTime = this.currentTime;
+          
+          // Show instructions to user
+          if (this.seekInstructions) {
+            this.seekInstructions.show();
+          }
+        } 
+        // If seeking backward, allow it
+        else if (seekingTo < this.currentTime) {
+          console.log('Backward seeking allowed to:', seekingTo);
+          this.currentTime = seekingTo;
+        }
+        // If seeking forward but within allowed range
+        else if (seekingTo <= maxWatchedTime) {
+          console.log('Seeking allowed within watched range:', seekingTo);
+          this.currentTime = seekingTo;
+        }
       } else {
         // Small adjustment is likely buffering, update our current time
         this.currentTime = this.videoElement.currentTime;

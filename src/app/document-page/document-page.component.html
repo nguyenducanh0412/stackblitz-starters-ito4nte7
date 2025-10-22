@@ -1,0 +1,27 @@
+<div class="document-page">
+  <div class="header">
+    <h1>Document Viewer</h1>
+  </div>
+
+  <div class="upload-section">
+    <input type="file" (change)="onFileSelected($event)" accept=".pdf,.pptx" />
+    <div class="sample-documents">
+      <p>Or load a sample document:</p>
+      <button
+        *ngFor="let doc of sampleDocuments"
+        (click)="loadSampleDocument(doc)"
+      >
+        {{ doc.name }}
+      </button>
+    </div>
+  </div>
+
+  <div *ngIf="isLoading" class="loading">Loading document...</div>
+
+  <div *ngIf="documentBase64 && !isLoading" class="document-container">
+    <app-document-viewer
+      [documentBase64]="documentBase64"
+      [documentType]="documentType"
+    ></app-document-viewer>
+  </div>
+</div>
