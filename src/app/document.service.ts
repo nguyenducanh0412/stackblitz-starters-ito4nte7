@@ -1,14 +1,13 @@
-import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
-import { map } from 'rxjs/operators';
+import { Injectable } from "@angular/core";
+import { HttpClient } from "@angular/common/http";
+import { Observable } from "rxjs";
+import { map } from "rxjs/operators";
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: "root",
 })
 export class DocumentService {
-
-  constructor(private http: HttpClient) { }
+  constructor(private http: HttpClient) {}
 
   /**
    * Load a document file and convert it to base64
@@ -16,10 +15,9 @@ export class DocumentService {
    * @returns Observable of the base64 encoded document
    */
   loadDocumentAsBase64(url: string): Observable<string> {
-    return this.http.get(url, { responseType: 'arraybuffer' })
-      .pipe(
-        map(buffer => this.arrayBufferToBase64(buffer))
-      );
+    return this.http
+      .get(url, { responseType: "arraybuffer" })
+      .pipe(map((buffer) => this.arrayBufferToBase64(buffer)));
   }
 
   /**
@@ -28,7 +26,7 @@ export class DocumentService {
    * @returns Base64 string
    */
   private arrayBufferToBase64(buffer: ArrayBuffer): string {
-    let binary = '';
+    let binary = "";
     const bytes = new Uint8Array(buffer);
     const len = bytes.byteLength;
     for (let i = 0; i < len; i++) {
@@ -42,12 +40,10 @@ export class DocumentService {
    * @param fileName File name with extension
    * @returns Document type ('pdf' or 'pptx')
    */
-  getDocumentType(fileName: string): 'pdf' | 'pptx' | null {
-    const extension = fileName.split('.').pop()?.toLowerCase();
-    if (extension === 'pdf') {
-      return 'pdf';
-    } else if (extension === 'pptx') {
-      return 'pptx';
+  getDocumentType(fileName: string): "pdf" | null {
+    const extension = fileName.split(".").pop()?.toLowerCase();
+    if (extension === "pdf") {
+      return "pdf";
     }
     return null;
   }
